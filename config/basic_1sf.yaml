@@ -1,0 +1,26 @@
+# basic_1sf.yaml: 基础仿真，包含一个5000节点的无标度网络层
+network:
+  num_nodes: 1000
+  layers:
+    - {type: scale_free, params: {m: 3}}
+
+simulation_params:
+  max_iterations: 400
+  record_interval: 10
+
+  convergence_params:
+    enabled: true        # 开启功能
+    threshold: 0.0001    # 总观点变化阈值
+    patience: 100        # 连续100次低于阈值则停止
+  
+  initial_state: 
+    opinion_range: [0.0, 1.0]
+    epsilon_base: 0.15
+    
+  dw_params: 
+    mu: 0.2
+    
+  coupling_params: 
+    enabled: false
+    lambda: 0.01
+    c_kl_global: 0.1

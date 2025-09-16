@@ -1,0 +1,47 @@
+# dw3d_10sw.yaml: [Aligned with basic] DW3D仿真，10层小世界网络
+network:
+  num_nodes: 1000
+  layers:
+    - {type: small_world, params: {k: 10, beta: 0.1}}
+    - {type: small_world, params: {k: 10, beta: 0.1}}
+    - {type: small_world, params: {k: 10, beta: 0.1}}
+    - {type: small_world, params: {k: 10, beta: 0.1}}
+    - {type: small_world, params: {k: 10, beta: 0.1}}
+    - {type: small_world, params: {k: 10, beta: 0.1}}
+    - {type: small_world, params: {k: 10, beta: 0.1}}
+    - {type: small_world, params: {k: 10, beta: 0.1}}
+    - {type: small_world, params: {k: 10, beta: 0.1}}
+    - {type: small_world, params: {k: 10, beta: 0.1}}
+
+simulation_params:
+  max_iterations: 400
+  record_interval: 10
+
+  convergence_params:
+    enabled: true        # 开启功能
+    threshold: 0.0001    # 总观点变化阈值
+    patience: 100        # 连续100次低于阈值则停止
+  
+  initial_state: 
+    opinion_range: [0.0, 1.0]
+    epsilon_base: 0.15 # Aligned
+    
+  dw_params: 
+    mu: 0.2 # Aligned
+    
+  coupling_params: 
+    enabled: true
+    lambda: 0.01 # Aligned
+    c_kl_global: 0.1 # Aligned
+    
+  dw3d_extensions:
+    interaction_mode: 'random'
+    dynamic_epsilon:
+      enabled: true
+      extremity_inhibition: {enabled: true, alpha: 0.5, opinion_center: 0.5}
+      time_evolution: {enabled: false, beta: 0.01}
+    dynamic_network:
+      enabled: true
+      disconnect_threshold_factor: 1.8
+      reconnect_probability: 0.01
+      reconnect_opinion_threshold: 0.15
