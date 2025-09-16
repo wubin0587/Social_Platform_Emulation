@@ -1,0 +1,11 @@
+numpy
+scipy
+matplotlib
+seaborn
+pyyaml
+networkx
+tqdm
+
+cupy
+# cupy-cuda12x
+# argparse
