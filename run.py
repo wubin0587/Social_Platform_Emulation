@@ -31,10 +31,29 @@ from utils.analysis import create_analysis_report
 
 # --- 辅助函数 ---
 def convert_numpy_to_json(obj):
-    if isinstance(obj, np.ndarray): return obj.tolist()
-    if isinstance(obj, np.integer): return int(obj)
-    if isinstance(obj, np.floating): return float(obj)
-    if isinstance(obj, np.bool_): return bool(obj)
+    """
+    一个可以同时处理 NumPy 和 CuPy 对象的 JSON 序列化转换器。
+    """
+    # 首先处理 NumPy 类型
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        return float(obj)
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    
+    # 接着处理 CuPy 类型 (仅当 CuPy 可用时)
+    if CUPY_AVAILABLE:
+        if isinstance(obj, cupy.ndarray):
+            # 关键步骤：先 .get() 转为 numpy 数组，再 .tolist() 转为列表
+            return obj.get().tolist()
+        # CuPy 的标量类型通常会自动转为 NumPy 或 Python 类型，但以防万一
+        if isinstance(obj, cupy.generic):
+            return obj.item()
+
+    # 如果以上都不是，则抛出原始错误
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 def main():

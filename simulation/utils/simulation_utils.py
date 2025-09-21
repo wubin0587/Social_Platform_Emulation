@@ -113,6 +113,7 @@ def initialize_poisson_events(st_config, sim_params, num_layers, xp):
     max_t = sim_params.get('max_iterations', 100)
     
     num_events = xp.random.poisson(poisson_rate * max_t)
+    num_events = int(num_events) # 将 ndarray 转换为 int
     print(f"泊松事件生成器: 在 {max_t} 迭代中，根据速率 {poisson_rate} 生成了 {num_events} 个独立事件。")
 
     spatial_range = st_config.get('spatial_range', [[0, 1], [0, 1]])
@@ -152,7 +153,7 @@ def calculate_event_influence(node_id, events, current_iteration, graphs, event_
     为单个节点计算当前时刻由【所有已爆发事件】叠加产生的总时空影响因子 (0到1之间)。
     """
     t = current_iteration
-    total_influence = 0.0
+    total_influence = xp.array(0.0, dtype=xp.float64)
 
     node_pos = graphs[0].nodes[node_id].get('pos')
     if node_pos is None:

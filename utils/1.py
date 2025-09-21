@@ -104,7 +104,7 @@ geo_locations = {
 # 【核心修改】
 # 1. 将所有网络相关的配置（layers, position_distribution）都放在一个 network 键下。
 # 2. 删除了文件末尾的 '---' 分隔符。
-file_template = """# D:\\Social_Platform_Emulation\\config\\{filename}
+file_template = """# config\\{filename}
 # {description}
 
 # --- 1. 网络与地理位置统一配置 ---
@@ -123,8 +123,8 @@ simulation_params:
 
   convergence_params:
     enabled: true        # 开启功能
-    threshold: 0.0001    # 总观点变化阈值
-    patience: 100        # 连续100次低于阈值则停止
+    threshold: 0.001    # 总观点变化阈值
+    patience: 30        # 连续100次低于阈值则停止
 
   initial_state: {{opinion_range: [0.0, 1.0], epsilon_base: 0.15}}
   dw_params: {{mu: 0.2}}
@@ -146,7 +146,7 @@ simulation_params:
 
 def generate_files():
     """主函数，用于生成所有配置文件"""
-    output_dir = "generated_configs"
+    output_dir = "spatiotemporal"
     os.makedirs(output_dir, exist_ok=True)
     print(f"开始生成配置文件，将保存到 '{output_dir}' 文件夹中...")
 

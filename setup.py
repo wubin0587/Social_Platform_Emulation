@@ -190,7 +190,7 @@ def run_single_simulation_task(config_file, command):
         # --- 修改之处：在下方增加了 env=child_env ---
         result = subprocess.run(
             command,
-            #capture_output=True,
+            capture_output=True,
             text=True,
             encoding='utf-8', # 这个'encoding'参数是告诉父进程如何“解码”子进程的输出
             check=False,
