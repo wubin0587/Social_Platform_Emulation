@@ -163,7 +163,7 @@ def main():
     if args.output: 
         output_basename = args.output
     else: 
-        output_basename = f"{args.sim_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        output_basename = f"{config_basename}_{timestamp}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     
     generate_all_plots(results_data, output_basename)
     create_analysis_report(results_data, output_basename)
