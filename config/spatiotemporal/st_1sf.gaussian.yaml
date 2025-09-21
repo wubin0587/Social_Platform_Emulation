@@ -1,4 +1,4 @@
-# D:\Social_Platform_Emulation\config\st_1sf.gaussian.yaml
+# config\st_1sf.gaussian.yaml
 # [Aligned] 时空仿真: 1层 无标度网络
 
 # --- 1. 网络与地理位置统一配置 ---
@@ -19,8 +19,8 @@ simulation_params:
 
   convergence_params:
     enabled: true        # 开启功能
-    threshold: 0.0001    # 总观点变化阈值
-    patience: 100        # 连续100次低于阈值则停止
+    threshold: 0.001    # 总观点变化阈值
+    patience: 30        # 连续100次低于阈值则停止
 
   initial_state: {opinion_range: [0.0, 1.0], epsilon_base: 0.15}
   dw_params: {mu: 0.2}
