@@ -110,7 +110,6 @@ METRICS_TO_CALCULATE = [
     'average_clustering_coefficient',
     'average_shortest_path_length',
     'get_giant_component_size',
-    'get_degree_distribution',
     'opinion_variance',
     'number_of_opinion_clusters'
 ]
