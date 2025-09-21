@@ -155,7 +155,7 @@ def main():
         # 2. 获取当前时间戳字符串
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         # 3. 组合成最终的基本文件名，格式为: yaml文件名_时间
-        output_basename = f"{config_basename}_{timestamp}.json"
+        output_filename = f"{config_basename}_{timestamp}.json"
     output_path = os.path.join(results_dir, output_filename)
     with open(output_path, 'w', encoding='utf-8') as f: json.dump(results_data, f, indent=4, default=convert_numpy_to_json)
     print(f"\n结果已成功保存到: {output_path}")
