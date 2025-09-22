@@ -29,7 +29,7 @@ def run_spatiotemporal_test_via_injection():
         python_executable,
         run_script_path,
         '--config', config_file,
-        '--metrics', 'opinion_variance', 'homophilic_bimodality_coefficient',
+        '--metrics', 'opinion_variance', 'homophilic_bimodality_coefficient', 'number_of_opinion_clusters',
         '--all_layers', # 对于单层网络，这仍然是安全的，会分析第0层
         '--output', output_filename
     ]

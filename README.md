@@ -126,50 +126,62 @@ python setup.py
 
 ## 配置文件（YAML）说明（常用字段）
 
-每个 YAML 文件位于 `config/` 或 `config/spatiotemporal/`，典型结构如下（示例片段来自 `config/basic_1sw.yaml`）：
+每个 YAML 文件位于 `config/` 或 `config/spatiotemporal/`，典型结构如下（示例片段来自 `config/test.yaml`）：
 
 ```yaml
-# basic_1sw.yaml: 基础仿真，包含一个5000节点的小世界网络层
+# basic_3sw.yaml: 基础仿真，包含3层小世界网络
 network:
-  num_nodes: 1000
+  num_nodes: 200
   layers:
-    - {type: small_world, params: {k: 10, beta: 0.1}}
+    - {type: small_world, params: {k: 4, beta: 0.1}}
+    - {type: scale_free, params: {m: 2}}
+    - {type: random, params: {p: 0.0201005}}
 
+# --- 2. 仿真模型参数 ---
 simulation_params:
-  max_iterations: 400
+  max_iterations: 100
   record_interval: 10
-
   convergence_params:
-    enabled: true        # 开启功能
-    threshold: 0.0001    # 总观点变化阈值
-    patience: 100        # 连续100次低于阈值则停止
-  
-  initial_state: 
-    opinion_range: [0.0, 1.0]
-    epsilon_base: 0.15
-    
-  dw_params: 
-    mu: 0.2
-    
-  coupling_params: 
+    enabled: true
+    threshold: 0.001
+    patience: 20
+  initial_state: {opinion_range: [0.0, 1.0], epsilon_base: 0.15}
+  dw_params: {mu: 0.2}
+  coupling_params:
     enabled: false
-    lambda: 0.01
-    c_kl_global: 0.1
+    lambda: 0.002
+    c_kl_global: 0.002
+
+# --- 3. DW3D 扩展参数 ---
+  dw3d_extensions:
+    interaction_mode: 'random'
+    dynamic_epsilon:
+      enabled: true
+      extremity_inhibition: {enabled: true, alpha: 0.5, opinion_center: 0.5}
+      time_evolution: {enabled: false, beta: 0.01}
+    dynamic_network:
+      enabled: true
+      disconnect_threshold_factor: 1.8
+      reconnect_probability: 0.01
+      reconnect_opinion_threshold: 0.15
 ```
 
-时空仿真额外常见字段（示例来自 `config/spatiotemporal/st_1ra.grid.yaml`）：
+时空仿真额外常见字段（示例来自 `config/spatiotemporal/test_spatiotemporal.yaml`）：
 
 ```yaml
-position_distribution:
-  type: 'grid'
-  grid_params: {rows: 32, cols: 32, jitter: 0.02}
+  # 模式: gaussian (高斯分布)
+  position_distribution:
+    type: 'gaussian'
+    gaussian_params: {mean: [0.5, 0.5], cov: [[0.03, 0], [0, 0.03]]}
 
-spatiotemporal_params:
-  poisson_rate: 0.1
-  spatial_range: [[0.0, 1.0], [0.0, 1.0]]
-  alpha: 0.8
-  beta: 0.05
-  interaction_prob: {base: 0.7, gain: 0.3}
+  spatiotemporal_params:
+    poisson_rate: 0.025
+    spatial_range: [[0.0, 1.0], [0.0, 1.0]]
+    alpha: 10
+    beta: 0.04
+    interaction_prob: {base: 0.4, gain: 0.3}
+    trust_scope: {gain: 0.2}
+    learning_rate: {gain: 0.2}
 ```
 
 **如何自定义**：通常需要设置 `network`（节点数与层定义）、`simulation_params`（迭代次数、记录频率、初始意见分布）、以及模型特有参数（如 `dw_params`、`coupling_params`、`spatiotemporal_params`）。修改后使用 `run.py` / `run_spatiotemporal.py` 指向该配置即可。

@@ -48,6 +48,7 @@ def plot_metrics_over_time(results_data: Dict[str, Any], output_dir: str):
     iterations = metrics_data.get('iteration', [])
     if not iterations: return
 
+    max_iteration_reached = iterations[-1] if iterations else 0
     layer_keys = [key for key in metrics_data if key.startswith('layer_')]
     
     sim_type = results_data.get("simulation_type")
@@ -71,6 +72,8 @@ def plot_metrics_over_time(results_data: Dict[str, Any], output_dir: str):
 
                 if event_time is None or affected_layer_idx is None:
                     continue
+                if event_time > max_iteration_reached:
+                    continue  # 跳过在此次模拟中未发生的事件
 
                 target_layer_key = f"layer_{affected_layer_idx}"
                 if target_layer_key in metrics_data and metric_name in metrics_data[target_layer_key]:
@@ -95,7 +98,7 @@ def plot_metrics_over_time(results_data: Dict[str, Any], output_dir: str):
 
 def plot_spatial_final_state(results_data: Dict[str, Any], output_dir: str):
     """
-    (更新版) 为 spatiotemporal 模型的【每一层】绘制最终状态的 2D 空间观点分布图。
+    (最终修复版) 为 spatiotemporal 模型的【每一层】绘制最终状态的 2D 空间观点分布图。
     - 绿色五角星: 事件作用于当前绘制的层。
     - 黄色五角星: 事件作用于其他层。
     """
@@ -106,7 +109,7 @@ def plot_spatial_final_state(results_data: Dict[str, Any], output_dir: str):
     
     raw_history = results_data['results'].get('raw_history', [])
     node_positions = results_data['results'].get('node_positions')
-    generated_events = results_data.get('results', {}).get('generated_events', [])
+    generated_events = results_data['results'].get('generated_events', [])
 
     if not raw_history or not node_positions:
         print("     Warning: 缺少观点历史或节点位置数据，跳过空间分布图。")
@@ -126,20 +129,28 @@ def plot_spatial_final_state(results_data: Dict[str, Any], output_dir: str):
         plt.figure(figsize=(12, 10))
         ax = plt.gca()
         
-        # 【修改】使用全局的 OPINION_CMAP 颜色图
         scatter = ax.scatter(positions[:, 0], positions[:, 1], c=final_opinions, cmap=OPINION_CMAP, s=50, alpha=0.8, vmin=0, vmax=1)
         
         if generated_events:
             affecting_events_pos = []
             other_layer_events_pos = []
             
+            # --- 修改核心在这里 ---
             for event in generated_events:
+                # 步骤1: 从事件字典中获取中心点 (可能是CuPy数组)
+                center_point_gpu = event['center']
+                # 步骤2: 显式地将其转换为NumPy数组
+                center_point_np = center_point_gpu.get() if hasattr(center_point_gpu, 'get') else np.array(center_point_gpu)
+                
+                # 步骤3: 将转换后的 NumPy 数组添加到列表中
                 if event.get('layer_index') == plotted_layer_idx:
-                    affecting_events_pos.append(event['center'])
+                    affecting_events_pos.append(center_point_np)
                 else:
-                    other_layer_events_pos.append(event['center'])
+                    other_layer_events_pos.append(center_point_np)
+            # --- 修改结束 ---
             
             if affecting_events_pos:
+                # 现在这里的列表已经是NumPy数组的列表，np.array可以安全处理
                 affecting_events_pos = np.array(affecting_events_pos)
                 ax.scatter(affecting_events_pos[:, 0], affecting_events_pos[:, 1], 
                            c='lime', marker='*', s=300, edgecolor='black', 
@@ -175,8 +186,11 @@ def plot_opinion_distributions(results_data: Dict[str, Any], output_dir: str):
         print("     Warning: Insufficient history data. Skipping distribution plots.")
         return
         
-    initial_opinions = np.array(raw_history[0]['opinions_snapshot'])
-    final_opinions = np.array(raw_history[-1]['opinions_snapshot'])
+    initial_opinions_gpu = raw_history[0]['opinions_snapshot']
+    initial_opinions = initial_opinions_gpu.get() if hasattr(initial_opinions_gpu, 'get') else np.array(initial_opinions_gpu)
+
+    final_opinions_gpu = raw_history[-1]['opinions_snapshot']
+    final_opinions = final_opinions_gpu.get() if hasattr(final_opinions_gpu, 'get') else np.array(final_opinions_gpu)
     final_iteration = raw_history[-1]['iteration']
     
     num_layers = initial_opinions.shape[1]
@@ -200,7 +214,7 @@ def plot_opinion_distributions(results_data: Dict[str, Any], output_dir: str):
 
 def plot_opinion_evolution_heatmap(results_data: Dict[str, Any], output_dir: str):
     """
-    为每个网络层绘制观点随时间演化的热力图。
+    为每个网络层绘制观点随时间演化的热力图。(已修复版本)
     """
     raw_history = results_data['results'].get('raw_history', [])
     if not raw_history:
@@ -212,14 +226,29 @@ def plot_opinion_evolution_heatmap(results_data: Dict[str, Any], output_dir: str
     num_layers = len(raw_history[0]['opinions_snapshot'][0])
     num_timesteps = len(iterations)
 
-    # 【移除】局部颜色图定义，将使用全局 OPINION_CMAP
+    # --- 修改开始 ---
+    # 步骤1: 在所有循环之外，一次性地将整个历史记录从 GPU 转换到 CPU
+    # 检查第一个快照是否有 .get 方法来判断数据类型
+    first_snapshot = raw_history[0]['opinions_snapshot']
+    if hasattr(first_snapshot, 'get'):
+        print("     Info: Detected GPU array in history. Converting to NumPy array...")
+        # 使用 .get() 将每个快照转换为 NumPy 数组，然后堆叠成一个 3D 数组
+        all_opinions_np = np.stack([h['opinions_snapshot'].get() for h in raw_history])
+    else:
+        # 如果已经是 NumPy 数组或列表，直接转换
+        all_opinions_np = np.array([h['opinions_snapshot'] for h in raw_history])
+    
+    # 此刻, all_opinions_np 是一个形状为 (时间步数, 节点数, 层数) 的 NumPy 数组
+    # --- 修改结束 ---
 
     for layer_idx in tqdm(range(num_layers), desc="  -> Plotting Heatmaps"):
-        opinion_matrix_time_rows = np.array([
-            [snapshot[node_idx][layer_idx] for node_idx in range(num_nodes)]
-            for snapshot in [h['opinions_snapshot'] for h in raw_history]
-        ])
-        opinion_matrix_node_rows = opinion_matrix_time_rows.T
+        
+        # --- 修改开始 ---
+        # 步骤2: 直接从已经转换好的 NumPy 大数组中切片出当前层的数据
+        # 这步操作非常快，因为它完全在 CPU 内存中进行
+        # 我们需要的数据形状是 (节点数, 时间步数)
+        opinion_matrix_node_rows = all_opinions_np[:, :, layer_idx].T
+        # --- 修改结束 ---
         sorted_at_each_step_matrix = np.zeros((num_nodes, num_timesteps))
         for t in range(num_timesteps):
             sorted_at_each_step_matrix[:, t] = np.sort(opinion_matrix_node_rows[:, t])

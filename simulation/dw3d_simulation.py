@@ -7,7 +7,6 @@ from simulation.basic_simulation import BasicSimulation # --- 继承已重构的
 from utils.gpu_utils import xp
 from simulation.utils.simulation_utils import (
     get_neighbors, 
-    clip_opinions,
     update_three_body_opinion,
     dynamic_epsilon_extremity,
     dynamic_epsilon_time_evolution,

@@ -34,7 +34,7 @@ def run_command_injection_test():
         run_script_path,
         '--sim_type', 'basic',
         '--config', config_file,
-        '--metrics', 'opinion_variance', 'homophilic_bimodality_coefficient',
+        '--metrics', 'opinion_variance', 'homophilic_bimodality_coefficient', 'number_of_opinion_clusters',
         '--all_layers',
         '--output', output_filename
     ]
