@@ -129,7 +129,6 @@ python setup.py
 每个 YAML 文件位于 `config/` 或 `config/spatiotemporal/`，典型结构如下（示例片段来自 `config/test.yaml`）：
 
 ```yaml
-# basic_3sw.yaml: 基础仿真，包含3层小世界网络
 network:
   num_nodes: 200
   layers:
