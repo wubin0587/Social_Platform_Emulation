@@ -24,7 +24,7 @@ try:
 
     # 在设置完字体后应用 Seaborn 主题
     sns.set_theme(style="whitegrid", font=font_name) 
-    print(f"✅ 已尝试将字体设置为: {font_name}")
+    #print(f"✅ 已尝试将字体设置为: {font_name}")
 
 except Exception as e:
     print(f"⚠️ 字体设置失败: {e}")
@@ -35,7 +35,7 @@ except Exception as e:
 nodes = [0.0, 0.5, 0.5, 1.0] 
 colors = ["royalblue", "lightsteelblue", "lightcoral", "firebrick"]
 OPINION_CMAP = LinearSegmentedColormap.from_list("sharp_diverging", list(zip(nodes, colors)))
-print("✅ 已定义全局观点颜色图 (OPINION_CMAP)。")
+#print("✅ 已定义全局观点颜色图 (OPINION_CMAP)。")
 
 
 def plot_metrics_over_time(results_data: Dict[str, Any], output_dir: str):
@@ -112,9 +112,12 @@ def plot_spatial_final_state(results_data: Dict[str, Any], output_dir: str):
         print("     Warning: 缺少观点历史或节点位置数据，跳过空间分布图。")
         return
         
-    final_opinions_snapshot = np.array(raw_history[-1]['opinions_snapshot'])
+    opinions_snapshot_gpu = raw_history[-1]['opinions_snapshot']
+    final_opinions_snapshot = opinions_snapshot_gpu.get() if hasattr(opinions_snapshot_gpu, 'get') else np.array(opinions_snapshot_gpu)
+
+    node_positions_gpu = node_positions
+    positions = node_positions_gpu.get() if hasattr(node_positions_gpu, 'get') else np.array(node_positions_gpu)
     num_layers = final_opinions_snapshot.shape[1]
-    positions = np.array(node_positions)
 
     for plotted_layer_idx in tqdm(range(num_layers), desc="  -> Plotting Spatial States"):
         
