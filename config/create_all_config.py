@@ -209,7 +209,7 @@ simulation_params:
     dynamic_epsilon:
       enabled: true
       extremity_inhibition: {{enabled: true, alpha: 0.5, opinion_center: 0.5}}
-      time_evolution: {{enabled: false, beta: -0.00125}}
+      time_evolution: {{enabled: false, beta: 0.00001}}
 
     dynamic_network:
       enabled: true
@@ -254,7 +254,7 @@ simulation_params:
     dynamic_epsilon:
       enabled: true
       extremity_inhibition: {{enabled: false, alpha: 0.5, opinion_center: 0.5}}
-      time_evolution: {{enabled: true, beta: -0.00125}}
+      time_evolution: {{enabled: true, beta: 0.00001}}
       
     dynamic_network:
       enabled: true
