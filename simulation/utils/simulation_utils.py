@@ -1,7 +1,8 @@
-import networkx as nx
 import random
-import numpy as xp
+import numpy as np 
+# 从您的 gpu_utils 导入 xp，它可能是 numpy 或 cupy
 from utils.gpu_utils import xp 
+from scipy.spatial import KDTree
 
 def initialize_opinions(num_nodes, opinion_range=(0.0, 1.0)):
     """
@@ -104,6 +105,13 @@ def clip_opinions(opinions, opinion_range=(0.0, 1.0)):
     """
     return xp.clip(opinions, opinion_range[0], opinion_range[1])
 
+def get_all_node_positions(graph):
+    """
+    高效地从图中提取所有节点及其位置，返回一个字典。
+    这比在循环中反复访问节点属性要快得多。
+    """
+    return {node: data['pos'] for node, data in graph.nodes(data=True) if 'pos' in data}
+
 def initialize_poisson_events(st_config, sim_params, num_layers, xp):
     """
     根据泊松分布生成一系列随机事件。
@@ -147,32 +155,101 @@ def initialize_poisson_events(st_config, sim_params, num_layers, xp):
             
     return events
 
-
 def calculate_event_influence(node_id, events, current_iteration, graphs, event_decay, xp):
     """
-    为单个节点计算当前时刻由【所有已爆发事件】叠加产生的总时空影响因子 (0到1之间)。
+    【已优化】为单个节点计算总时空影响因子。
+    新增了“遗忘”机制，会忽略影响已经衰减到可忽略不计的旧事件。
     """
     t = current_iteration
     total_influence = xp.array(0.0, dtype=xp.float64)
 
     node_pos = graphs[0].nodes[node_id].get('pos')
     if node_pos is None:
-        # 注意：这里的警告机制简化了，不再使用 self._warned_no_pos 标志
-        # 每次遇到没有 'pos' 的节点都会警告一次，但在一个大规模仿真中通常只会显示前几次
-        print(f"警告: 节点 {node_id} 缺少 'pos' 属性，时空效应将对该节点无效。")
+        # 这个警告可以保留，但我们只在第一次遇到时打印，以避免刷屏
+        if not hasattr(calculate_event_influence, '_warned_no_pos'):
+            print(f"警告: 节点 {node_id} (及其他类似节点) 缺少 'pos' 属性，时空效应将无效。")
+            calculate_event_influence._warned_no_pos = True
         return 0.0
     
-    node_pos_arr = xp.array(node_pos)
+    node_pos_arr = xp.asarray(node_pos)
     
     alpha = event_decay['alpha']
     beta = event_decay['beta']
     
+    # 【新增】计算“遗忘”时间差阈值
+    # 如果影响力小于 0.01 (1%)，我们就认为它消失了
+    # np.log 在这里是安全的，因为它只在初始化时计算一次
+    if not hasattr(calculate_event_influence, '_cutoff_delta_t'):
+        # 使用 numpy 计算这个静态阈值，因为它只在CPU上计算一次
+        import numpy as local_np
+        threshold = 1e-2 
+        calculate_event_influence._cutoff_delta_t = -local_np.log(threshold) / beta
+    
+    cutoff_delta_t = calculate_event_influence._cutoff_delta_t
+
     for event in events:
-        if t < event['t0']:
+        time_delta = t - event['t0']
+        
+        # 【优化点】如果事件还未发生 或 已经“被遗忘”，则快速跳过
+        if time_delta < 0 or time_delta > cutoff_delta_t:
             continue
 
-        distance_r = xp.linalg.norm(node_pos_arr - event['center'])
-        influence_from_one_event = xp.exp(-alpha * distance_r) * xp.exp(-beta * (t - event['t0']))
+        # 只有通过了检查的“有意义”的事件，才执行下面的昂贵计算
+        event_center_arr = xp.asarray(event['center'])
+        distance_r = xp.linalg.norm(node_pos_arr - event_center_arr)
+        
+        influence_from_one_event = xp.exp(-alpha * distance_r) * xp.exp(-beta * time_delta)
         total_influence += influence_from_one_event
         
     return float(xp.clip(total_influence, 0.0, 1.0))
+
+# --- KD-Tree 相关函数：明确使用 numpy ---
+
+def build_kdtree(all_node_positions):
+    """
+    根据节点位置构建 KD-Tree。
+    返回 KD-Tree 对象和节点ID列表（用于索引映射）。
+    明确将 CuPy 数组转换为 NumPy 数组。
+    """
+    node_ids = list(all_node_positions.keys())
+    
+    # 【核心修改】确保将位置数据转换为 NumPy 数组
+    # all_node_positions 的值可能是 CuPy 数组，需要 .get() 或 .cupy.get()
+    positions_list = []
+    for nid in node_ids:
+        pos_val = all_node_positions[nid]
+        if hasattr(pos_val, 'get'): # 如果是 CuPy 数组，转换为 NumPy
+            positions_list.append(pos_val.get())
+        else: # 否则已经是 NumPy 数组或 Python 列表/元组
+            positions_list.append(pos_val)
+            
+    positions = np.array(positions_list) # 使用 np.array 创建 NumPy 数组
+
+    if positions.size == 0:
+        return None, []
+    kdtree = KDTree(positions)
+    return kdtree, node_ids
+
+def get_spatial_neighbors_kdtree(kdtree, node_ids, node_id, radius):
+    """
+    使用 KD-Tree 高效查询指定半径内的所有空间邻居。
+    """
+    # KD-Tree 使用的是数值索引，我们需要先找到 active_node 的索引
+    try:
+        node_index = node_ids.index(node_id)
+    except ValueError:
+        return [] # 如果节点不在树中
+
+    # KD-Tree 的数据已经是 NumPy 数组
+    node_pos = kdtree.data[node_index]
+    
+    # 查询半径内的所有点的索引
+    # p=2 表示欧氏距离
+    neighbor_indices = kdtree.query_ball_point(node_pos, r=radius, p=2)
+    
+    # 将索引转换回节点ID，并排除节点自身
+    neighbors = [node_ids[i] for i in neighbor_indices if i != node_index]
+    return neighbors
+
+# 注意：initialize_poisson_events 中的 xp.array([event_center_x, event_center_y])
+# 会根据传入的 xp 自动创建正确的数组类型，这没问题。

@@ -137,11 +137,16 @@ simulation_params:
   spatiotemporal_params:
     poisson_rate: 0.025
     spatial_range: [[0.0, 1.0], [0.0, 1.0]]
-    alpha: 10
+    alpha: 2
     beta: 0.04
     interaction_prob: {{base: 0.4, gain: 0.3}}
-    trust_scope: {{gain: 0.2}}
+    trust_scope: {{gain: 0.3}}
     learning_rate: {{gain: 0.2}}
+
+    spatial_neighbors:
+      enabled: true          # 是否启用空间邻居发现
+      base_radius: 0.02      # 节点的日常空间感知半径 (无事件影响时)
+      radius_gain: 0.05       # 事件对空间感知半径的增益系数
 """
 
 # 模板2: 用于基础 DW 模型 (Basic)
