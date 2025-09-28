@@ -146,7 +146,7 @@ def run_single_simulation_task(config_file, command):
 
         result = subprocess.run(
             command,
-            capture_output=True, 
+            #capture_output=True, 
             text=True, 
             encoding='utf-8',
             check=False, 
@@ -183,7 +183,7 @@ def main():
     print("\n--- 4. 并行批量仿真任务已启动 ---")
 
     # 设置并行工作进程数
-    MAX_WORKERS = 1 # 您可以根据您的GPU核心数调整此值
+    MAX_WORKERS = 8 # 您可以根据您的GPU核心数调整此值
     print(f"将使用最多 {MAX_WORKERS} 个并行进程。")
 
     # 1. 构建所有命令

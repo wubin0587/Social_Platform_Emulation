@@ -6,6 +6,5 @@ pyyaml
 networkx
 tqdm
 
-cupy-cuda12x
 # cupy-cuda12x
 # argparse
